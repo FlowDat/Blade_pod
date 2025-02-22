@@ -1,0 +1,180 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.2.0                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Which of the steps to run
+castellatedMesh true;   
+snap            true;  
+addLayers       true; 
+
+
+geometry // Load in STL files here
+{
+	BLADE_SURFACE.stl {type triSurfaceMesh; name BLADE_SURFACE;}
+	VIRTUAL_SURFACE.stl {type triSurfaceMesh; name VIRTUAL_SURFACE;}
+	INLET.stl {type triSurfaceMesh; name INLET;}
+	OUTLET.stl {type triSurfaceMesh; name OUTLET;}
+	PERIODIC_1.stl {type triSurfaceMesh; name PERIODIC_1;}
+	PERIODIC_2.stl {type triSurfaceMesh; name PERIODIC_2;}
+	SYMMETRY.stl {type triSurfaceMesh; name SYMMETRY;}
+
+    refinementBoxX
+    {
+        type searchableBox;
+        min (-3  -27.5 0.5);
+        max ( 3  -23.5 10);
+    }
+
+    refinementBoxA
+    {
+        type searchableBox;
+        min (-2 -75 0);
+        max ( 2  0 25);
+    }
+    refinementBoxR
+    {
+        type searchableBox;
+        min (-25 -27 0);
+        max ( 25 -23 25);
+    }
+    refinementCyl
+    {
+    	type searchableCylinder;
+         point1 (0 -75 0);
+    	 point2 (0 0 0);
+         radius 8;
+    }
+};
+
+castellatedMeshControls
+{
+    maxLocalCells 1000000;  
+    maxGlobalCells 20000000;
+    minRefinementCells 40;  
+    maxLoadUnbalance 0.5;
+    nCellsBetweenLevels 3; 
+
+    // Explicit feature edge refinement
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    features // taken from STL from each .eMesh file created by "SurfaceFeatureExtract" command
+    (
+        {file "BLADE_SURFACE.eMesh"; level 4;}
+        {file "VIRTUAL_SURFACE.eMesh"; level 2;}
+	{file "INLET.eMesh"; level 0;}
+	{file "OUTLET.eMesh"; level 0;}
+	{file "PERIODIC_1.eMesh"; level 0;}
+	{file "PERIODIC_2.eMesh"; level 0;}
+	{file "SYMMETRY.eMesh"; level 2;} 
+    );
+
+    // Surface based refinement
+    // ~~~~~~~~~~~~~~~~~~~~~~~~
+
+    refinementSurfaces // Surface-wise min and max refinement level
+    {
+	BLADE_SURFACE {level (2 9);patchInfo{type wall;}}
+	VIRTUAL_SURFACE {level (2 4);patchInfo{type wall;}}
+	INLET {level (0 2);patchInfo{type patch;}}
+	OUTLET {level (0 2);patchInfo{type patch;}}
+	PERIODIC_1 {level (0 4);}
+	PERIODIC_2 {level (0 4);}
+	SYMMETRY {level (0 4);patchInfo{type wall;}}
+    }  
+
+
+    resolveFeatureAngle 30; 
+    refinementRegions      
+    {
+//	BLADE_SURFACE {mode distance; levels ((0.05 14));}
+        refinementBoxX {mode inside; levels ((1E15 5));}
+        refinementBoxA {mode inside; levels ((1E15 2));}
+        refinementBoxR {mode inside; levels ((1E15 2));}
+        refinementCyl {mode inside; levels ((1E15 2));}
+    } 
+
+    locationInMesh (0.61 -24.7 0.91106);  
+    allowFreeStandingZoneFaces false;
+}
+
+snapControls
+{
+    nSmoothPatch 1;
+    tolerance 4.0;
+    nSolveIter 20;//was 200
+    nRelaxIter 5;
+    nFeatureSnapIter 10; 
+    
+	implicitFeatureSnap false; 
+	explicitFeatureSnap true; //was false
+	multiRegionFeatureSnap false; 
+
+}
+
+addLayersControls  
+{
+    relativeSizes true; 
+    layers {
+	"BLADE_SURFACE" {nSurfaceLayers 5;}
+	"VIRTUAL_SURFACE" {nSurfaceLayers 3;}	
+	    }
+
+    expansionRatio 1;
+    finalLayerThickness 0.3; 
+    minThickness 0.01; 
+    nGrow 0;  
+
+    featureAngle 30; 
+    nRelaxIter 3;  
+    nSmoothSurfaceNormals 1;  
+    nSmoothNormals 3; 
+    nSmoothThickness 10;  
+    maxFaceThicknessRatio 0.5; 
+    maxThicknessToMedialRatio 0.3; 
+    minMedianAxisAngle 90; 
+    nBufferCellsNoExtrude 0;  
+    nLayerIter 50; 
+}
+
+    meshQualityControls
+    {
+    maxNonOrtho 65;
+    maxBoundarySkewness 5;
+    maxInternalSkewness 2.5;
+    maxConcave 80;
+    minFlatness 0.5;
+    minVol 1e-13;
+    minTetQuality 1e-16;
+    minArea -1;
+    minTwist 0.01;
+    minDeterminant 0.001;
+    minFaceWeight 0.05;
+    minVolRatio 0.01;
+    minTriangleTwist -1e30;
+
+    nSmoothScale 4;
+    errorReduction 0.75;
+//	relaxed
+//	{
+//	maxNonOrtho 	75;
+//	}
+    }
+
+debug 0;
+
+mergeTolerance 1E-6;
+
+
+// ************************************************************************* //
